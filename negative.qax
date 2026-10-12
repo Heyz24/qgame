@@ -1,0 +1,47 @@
+// qgame/negative.qax -- every precondition of the package must STOP the program, never continue silently.
+// Reads a case number from stdin and triggers that one misuse. run-tests.sh / run-tests.bat run every case and check
+// that each one exits with code 101 and prints "assertion failed [<expected file>:<line>]" (the file shows WHICH check fired).
+//
+//   case  expected file   misuse
+//     0   grid.qax        qg_get outside the grid (x == width)
+//     1   grid.qax        qg_get at y == -1
+//     2   grid.qax        qg_set outside the grid
+//     3   grid.qax        qg_grid(0, 5, 0)
+//     4   grid.qax        qg_grid(5, 0, 0)
+//     5   grid.qax        qg_grid(5000, 5000, 0) (over the 16,777,216 cell cap)
+//     6   grid.qax        qg_grid_from_rows with rows of different length
+//     7   grid.qax        qg_grid_from_rows with a first row that is empty (zero width)
+//     8   rect.qax        qg_rect with a negative width
+//     9   rect.qax        qg_rect with a negative height
+//    10   rng.qax         qg_rng_below(r, 0)
+//    11   rng.qax         qg_rng_below(r, 4294967296)
+//    12   rng.qax         qg_rng_range with lo > hi
+//    13   rng.qax         qg_rng_range with a span of 2^32 or more
+//    14   clock.qax       qg_clock(0)
+//    15   clock.qax       qg_cooldown(-1)
+//    16   rng.qax         qg_rng_range(r, INT_MIN, INT_MAX): the span overflows 64 bits (must be caught by the span check, line 44, not later)
+import "qgame.qax"
+
+fn main() {
+    let c = int(input())
+    let g = qg_grid(3, 3, 0)
+    let r = qg_rng(1)
+    if c == 0 { qg_get(g, 3, 0) }
+    if c == 1 { qg_get(g, 0, -1) }
+    if c == 2 { qg_set(g, 0, 3, 1) }
+    if c == 3 { qg_grid(0, 5, 0) }
+    if c == 4 { qg_grid(5, 0, 0) }
+    if c == 5 { qg_grid(5000, 5000, 0) }
+    if c == 6 { qg_grid_from_rows(["ab", "abc"], "a") }
+    if c == 7 { qg_grid_from_rows([""], "a") }
+    if c == 8 { qg_rect(0, 0, -1, 1) }
+    if c == 9 { qg_rect(0, 0, 1, -1) }
+    if c == 10 { qg_rng_below(r, 0) }
+    if c == 11 { qg_rng_below(r, 4294967296) }
+    if c == 12 { qg_rng_range(r, 5, 4) }
+    if c == 13 { qg_rng_range(r, 0, 4294967295) }
+    if c == 14 { qg_clock(0) }
+    if c == 15 { qg_cooldown(-1) }
+    if c == 16 { qg_rng_range(r, INT_MIN, INT_MAX) }
+    print("case", c, "did NOT stop")
+}

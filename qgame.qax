@@ -1,0 +1,7 @@
+// qgame/qgame.qax -- umbrella file: import "qgame/qgame.qax" for everything.
+import "rng.qax"
+import "rect.qax"
+import "grid.qax"
+import "life.qax"
+import "path.qax"
+import "clock.qax"

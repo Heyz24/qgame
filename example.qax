@@ -1,0 +1,38 @@
+// qgame/example.qax -- a tour of the package. Build and run:  qaxlc example.qax -o example.exe && example.exe
+import "qgame.qax"
+
+fn show(g QgGrid) {
+    for line in qg_grid_rows(g, "#", ".") { print(line) }
+}
+
+fn main() {
+    // 1. reproducible randomness: the same seed always rolls the same dice
+    let dice = qg_rng(2024)
+    print("five d6 rolls:", qg_rng_range(dice, 1, 6), qg_rng_range(dice, 1, 6), qg_rng_range(dice, 1, 6), qg_rng_range(dice, 1, 6), qg_rng_range(dice, 1, 6))
+
+    // 2. Game of Life: a glider walks one cell down-right every 4 generations
+    let g = qg_grid_from_rows(["..#.....", "...#....", ".###....", "........", "........", "........"], "#")
+    print("generation 0:")
+    show(g)
+    let i = 0
+    while i < 4 {
+        g = qg_life_step(g)
+        i = i + 1
+    }
+    print("generation 4:")
+    show(g)
+
+    // 3. shortest path through a maze (# = wall)
+    let maze = qg_grid_from_rows(["..#.....", ".##.###.", "....#...", ".####.#.", "......#."], "#")
+    print("steps from top-left to (7, 4):", qg_path_len(maze, 0, 0, 7, 4, 1))
+    print("steps to the walled-in cell (3, 0):", qg_path_len(maze, 0, 0, 3, 0, 1))
+
+    // 4. hit boxes
+    let ship = qg_rect(10, 10, 20, 10)
+    let rock = qg_rect(25, 15, 10, 10)
+    print("overlap:", qg_rect_overlap(ship, rock), "shared area:", qg_rect_intersection(ship, rock).w, "x", qg_rect_intersection(ship, rock).h)
+
+    // 5. a fixed time step: 50 ms of real time at 16 ms per update is 3 updates
+    let clock_ = qg_clock(16)
+    print("updates due after 50 ms:", qg_clock_advance(clock_, 50))
+}

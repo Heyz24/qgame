@@ -1,0 +1,105 @@
+// qgame/grid.qax -- a 2D grid of ints (tile maps, boards, cellular automata). Row-major in one flat array.
+//
+// Out-of-bounds access is a programming error: qg_get / qg_set stop the program with "assertion failed [grid.qax:N]"
+// (exit code 101). Use qg_in to test first, or qg_get_or for "outside counts as X".
+// A QgGrid is a reference type: `let b = a` shares the cells. Use qg_grid_copy for an independent copy.
+
+struct QgGrid {
+    w int,
+    h int,
+    cells [int]
+}
+
+// w, h >= 1 and w * h <= 16,777,216 cells.
+fn qg_grid(w int, h int, fill int) QgGrid {
+    assert(w >= 1 and h >= 1)
+    assert(w <= 16777216 and h <= 16777216 and w * h <= 16777216)
+    return QgGrid { w: w, h: h, cells: make(w * h, fill) }
+}
+
+fn qg_in(g QgGrid, x int, y int) bool {
+    return x >= 0 and y >= 0 and x < g.w and y < g.h
+}
+
+fn qg_get(g QgGrid, x int, y int) int {
+    assert(qg_in(g, x, y))
+    return g.cells[y * g.w + x]
+}
+
+fn qg_get_or(g QgGrid, x int, y int, outside int) int {
+    if not qg_in(g, x, y) { return outside }
+    return g.cells[y * g.w + x]
+}
+
+fn qg_set(g QgGrid, x int, y int, v int) {
+    assert(qg_in(g, x, y))
+    g.cells[y * g.w + x] = v
+}
+
+fn qg_fill(g QgGrid, v int) {
+    let i = 0
+    while i < len(g.cells) {
+        g.cells[i] = v
+        i = i + 1
+    }
+}
+
+// How many cells equal v.
+fn qg_count(g QgGrid, v int) int {
+    let n = 0
+    let i = 0
+    while i < len(g.cells) {
+        if g.cells[i] == v { n = n + 1 }
+        i = i + 1
+    }
+    return n
+}
+
+fn qg_grid_copy(g QgGrid) QgGrid {
+    return QgGrid { w: g.w, h: g.h, cells: g.cells[0..] }
+}
+
+fn qg_grid_equal(a QgGrid, b QgGrid) bool {
+    if a.w != b.w or a.h != b.h { return false }
+    let i = 0
+    while i < len(a.cells) {
+        if a.cells[i] != b.cells[i] { return false }
+        i = i + 1
+    }
+    return true
+}
+
+// Build a grid from text rows: every character that is `on` becomes 1, everything else 0. Rows must all have equal length.
+fn qg_grid_from_rows(rows [str], on str) QgGrid {
+    assert(len(rows) >= 1)
+    let g = qg_grid(len(rows[0]), len(rows), 0)
+    let y = 0
+    while y < len(rows) {
+        assert(len(rows[y]) == g.w)
+        let x = 0
+        while x < g.w {
+            if rows[y][x..x + 1] == on { g.cells[y * g.w + x] = 1 }
+            x = x + 1
+        }
+        y = y + 1
+    }
+    return g
+}
+
+// One text row per grid row: `on_ch` for non-zero cells, `off_ch` for zero cells.
+fn qg_grid_rows(g QgGrid, on_ch str, off_ch str) [str] {
+    let out = [""]
+    pop(out)
+    let y = 0
+    while y < g.h {
+        let line = ""
+        let x = 0
+        while x < g.w {
+            if g.cells[y * g.w + x] != 0 { line = line + on_ch } else { line = line + off_ch }
+            x = x + 1
+        }
+        push(out, line)
+        y = y + 1
+    }
+    return out
+}

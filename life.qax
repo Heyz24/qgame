@@ -1,0 +1,33 @@
+// qgame/life.qax -- Conway's Game of Life on a QgGrid (non-zero = alive). Cells outside the grid count as dead.
+
+// Live cells among the 8 neighbours of (x, y).
+fn qg_life_neighbors(g QgGrid, x int, y int) int {
+    let n = 0
+    let dy = -1
+    while dy <= 1 {
+        let dx = -1
+        while dx <= 1 {
+            if (dx != 0 or dy != 0) and qg_get_or(g, x + dx, y + dy, 0) != 0 { n = n + 1 }
+            dx = dx + 1
+        }
+        dy = dy + 1
+    }
+    return n
+}
+
+// The next generation as a NEW grid (the argument is not changed). Live cells are stored as 1.
+fn qg_life_step(g QgGrid) QgGrid {
+    let out = qg_grid(g.w, g.h, 0)
+    let y = 0
+    while y < g.h {
+        let x = 0
+        while x < g.w {
+            let n = qg_life_neighbors(g, x, y)
+            let alive = g.cells[y * g.w + x] != 0
+            if (alive and (n == 2 or n == 3)) or (not alive and n == 3) { out.cells[y * g.w + x] = 1 }
+            x = x + 1
+        }
+        y = y + 1
+    }
+    return out
+}

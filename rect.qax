@@ -1,0 +1,42 @@
+// qgame/rect.qax -- axis-aligned rectangles (hit boxes). Integer pixels / tiles.
+// A rectangle covers x ..< x+w and y ..< y+h: two rectangles that only share an edge do NOT overlap.
+
+struct QgRect {
+    x int,
+    y int,
+    w int,
+    h int
+}
+
+// w and h must be >= 0.
+fn qg_rect(x int, y int, w int, h int) QgRect {
+    assert(w >= 0 and h >= 0)
+    return QgRect { x: x, y: y, w: w, h: h }
+}
+
+fn qg_rect_right(r QgRect) int { return r.x + r.w }
+fn qg_rect_bottom(r QgRect) int { return r.y + r.h }
+
+// A rectangle with no area (w == 0 or h == 0) overlaps nothing, not even a rectangle that contains its position.
+fn qg_rect_overlap(a QgRect, b QgRect) bool {
+    if a.w == 0 or a.h == 0 or b.w == 0 or b.h == 0 { return false }
+    return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h
+}
+
+fn qg_rect_has(r QgRect, px int, py int) bool {
+    return px >= r.x and px < r.x + r.w and py >= r.y and py < r.y + r.h
+}
+
+// The shared area; a 0 x 0 rectangle at a's origin if they do not overlap.
+fn qg_rect_intersection(a QgRect, b QgRect) QgRect {
+    if not qg_rect_overlap(a, b) { return QgRect { x: a.x, y: a.y, w: 0, h: 0 } }
+    let x1 = max(a.x, b.x)
+    let y1 = max(a.y, b.y)
+    let x2 = min(a.x + a.w, b.x + b.w)
+    let y2 = min(a.y + a.h, b.y + b.h)
+    return QgRect { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }
+}
+
+fn qg_rect_move(r QgRect, dx int, dy int) QgRect {
+    return QgRect { x: r.x + dx, y: r.y + dy, w: r.w, h: r.h }
+}

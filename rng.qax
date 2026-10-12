@@ -1,0 +1,70 @@
+// qgame/rng.qax -- a small deterministic random number generator (xorshift32).
+//
+// Why not the built-in rand()? rand() seeds itself from the clock, so a game cannot replay a level, a bug report cannot
+// be reproduced, and a test cannot be exact. QgRng is fully determined by its seed.
+//
+// NOT suitable for anything security related. Period 2^32 - 1.
+// A QgRng is a reference type like every struct: `let b = a` makes b and a the SAME generator.
+
+struct QgRng {
+    s int
+}
+
+// Any seed works; only its low 32 bits are used, and 0 (the one forbidden xorshift state) is replaced.
+fn qg_rng(seed int) QgRng {
+    let s = seed & 0xFFFFFFFF
+    if s == 0 { s = 0x9E3779B9 }
+    return QgRng { s: s }
+}
+
+// Next raw value: 1 ..= 4294967295 (xorshift32 never yields 0).
+fn qg_rng_u32(r QgRng) int {
+    let x = r.s
+    x = x ^ ((x << 13) & 0xFFFFFFFF)
+    x = x ^ (x >> 17)
+    x = x ^ ((x << 5) & 0xFFFFFFFF)
+    r.s = x
+    return x
+}
+
+// Uniform integer in 0 ..= n-1 (no modulo bias: values from the biased tail are redrawn). Needs 1 <= n <= 4294967295.
+fn qg_rng_below(r QgRng, n int) int {
+    assert(n >= 1 and n <= 4294967295)
+    // raw values are 1..2^32-1, so use v-1 in 0..2^32-2: 2^32-1 equally likely values
+    let span = 4294967295
+    let limit = span - (span % n)
+    let v = qg_rng_u32(r) - 1
+    while v >= limit { v = qg_rng_u32(r) - 1 }
+    return v % n
+}
+
+// Uniform integer in lo ..= hi (both inclusive). Needs lo <= hi and hi - lo < 4294967295.
+fn qg_rng_range(r QgRng, lo int, hi int) int {
+    assert(lo <= hi)
+    assert(hi - lo >= 0 and hi - lo < 4294967295)
+    return lo + qg_rng_below(r, hi - lo + 1)
+}
+
+// Uniform float in [0.0, 1.0).
+fn qg_rng_float(r QgRng) float {
+    return float(qg_rng_u32(r) - 1) / 4294967295.0
+}
+
+// True with probability pct/100 (pct <= 0 never, pct >= 100 always).
+fn qg_rng_chance(r QgRng, pct int) bool {
+    if pct <= 0 { return false }
+    if pct >= 100 { return true }
+    return qg_rng_below(r, 100) < pct
+}
+
+// Fisher-Yates shuffle, in place.
+fn qg_rng_shuffle(r QgRng, xs [int]) {
+    let i = len(xs) - 1
+    while i > 0 {
+        let j = qg_rng_below(r, i + 1)
+        let t = xs[i]
+        xs[i] = xs[j]
+        xs[j] = t
+        i = i - 1
+    }
+}

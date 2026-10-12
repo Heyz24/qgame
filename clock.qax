@@ -1,0 +1,62 @@
+// qgame/clock.qax -- fixed time step and cooldowns, in whole milliseconds.
+//
+// A game loop that updates by "however long the last frame took" behaves differently on every machine. A fixed step
+// gives the same simulation everywhere: feed the real frame time to qg_clock_advance and run your update that many times.
+
+struct QgClock {
+    step int,       // ms per update
+    acc int,        // ms not yet consumed
+    max_steps int   // never ask for more than this many updates in one frame
+}
+
+// step_ms >= 1. At most 10 updates per advance (see qg_clock_advance).
+fn qg_clock(step_ms int) QgClock {
+    assert(step_ms >= 1)
+    return QgClock { step: step_ms, acc: 0, max_steps: 10 }
+}
+
+// Add dt_ms of real time (negative values count as 0). Returns how many fixed updates to run now.
+// If more than max_steps are due (the game stalled), the excess time is DROPPED rather than replayed: otherwise a long
+// pause makes the next frame even longer, which makes the next one worse ("spiral of death").
+fn qg_clock_advance(c QgClock, dt_ms int) int {
+    if dt_ms > 0 { c.acc = c.acc + dt_ms }
+    let n = c.acc / c.step
+    if n > c.max_steps {
+        n = c.max_steps
+        c.acc = 0
+    } else {
+        c.acc = c.acc - n * c.step
+    }
+    return n
+}
+
+// 0.0 ..< 1.0: how far we are into the next update, for interpolating drawing between updates.
+fn qg_clock_alpha(c QgClock) float {
+    return float(c.acc) / float(c.step)
+}
+
+// A cooldown (weapon reload, invulnerability frames, ...).
+struct QgCooldown {
+    length int,
+    left int
+}
+
+// Starts ready. length_ms >= 0.
+fn qg_cooldown(length_ms int) QgCooldown {
+    assert(length_ms >= 0)
+    return QgCooldown { length: length_ms, left: 0 }
+}
+
+fn qg_cooldown_ready(c QgCooldown) bool { return c.left <= 0 }
+
+// If ready: start the cooldown and return true. Otherwise false and nothing changes.
+fn qg_cooldown_use(c QgCooldown) bool {
+    if c.left > 0 { return false }
+    c.left = c.length
+    return true
+}
+
+fn qg_cooldown_tick(c QgCooldown, dt_ms int) {
+    if dt_ms <= 0 { return }
+    c.left = max(0, c.left - dt_ms)
+}

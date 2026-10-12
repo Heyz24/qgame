@@ -1,0 +1,73 @@
+// qgame/path.qax -- breadth-first search on a QgGrid with 4-way movement.
+// A cell is walkable unless it equals `wall`. Cost of every step is 1.
+
+// Length (in steps) of a shortest path from (sx, sy) to (tx, ty), or -1 if there is none, a cell is a wall, or a
+// coordinate is outside the grid. Start == target on a walkable cell gives 0.
+fn qg_path_len(g QgGrid, sx int, sy int, tx int, ty int, wall int) int {
+    if not qg_in(g, sx, sy) or not qg_in(g, tx, ty) { return -1 }
+    if g.cells[sy * g.w + sx] == wall or g.cells[ty * g.w + tx] == wall { return -1 }
+    let dist = make(g.w * g.h, -1)
+    let queue = [sy * g.w + sx]
+    dist[sy * g.w + sx] = 0
+    let head = 0
+    while head < len(queue) {
+        let cur = queue[head]
+        head = head + 1
+        let cx = cur % g.w
+        let cy = cur / g.w
+        if cx == tx and cy == ty { return dist[cur] }
+        let k = 0
+        while k < 4 {
+            let nx = cx
+            let ny = cy
+            if k == 0 { nx = cx + 1 }
+            if k == 1 { nx = cx - 1 }
+            if k == 2 { ny = cy + 1 }
+            if k == 3 { ny = cy - 1 }
+            if qg_in(g, nx, ny) {
+                let ni = ny * g.w + nx
+                if g.cells[ni] != wall and dist[ni] < 0 {
+                    dist[ni] = dist[cur] + 1
+                    push(queue, ni)
+                }
+            }
+            k = k + 1
+        }
+    }
+    return -1
+}
+
+// Number of cells in the 4-connected region that contains (x, y) and holds the same value as (x, y)
+// (flood-fill size). 0 if (x, y) is outside the grid.
+fn qg_region_size(g QgGrid, x int, y int) int {
+    if not qg_in(g, x, y) { return 0 }
+    let want = g.cells[y * g.w + x]
+    let seen = make(g.w * g.h, false)
+    let queue = [y * g.w + x]
+    seen[y * g.w + x] = true
+    let head = 0
+    while head < len(queue) {
+        let cur = queue[head]
+        head = head + 1
+        let cx = cur % g.w
+        let cy = cur / g.w
+        let k = 0
+        while k < 4 {
+            let nx = cx
+            let ny = cy
+            if k == 0 { nx = cx + 1 }
+            if k == 1 { nx = cx - 1 }
+            if k == 2 { ny = cy + 1 }
+            if k == 3 { ny = cy - 1 }
+            if qg_in(g, nx, ny) {
+                let ni = ny * g.w + nx
+                if not seen[ni] and g.cells[ni] == want {
+                    seen[ni] = true
+                    push(queue, ni)
+                }
+            }
+            k = k + 1
+        }
+    }
+    return len(queue)
+}
